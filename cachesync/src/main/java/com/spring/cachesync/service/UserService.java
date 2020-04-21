@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,27 +34,32 @@ public class UserService implements ApplicationEventPublisherAware {
 	@Value("#{'${server.list}'.split(',')}")
 	private List<String> servers;
 
-	public ICache cache = new CacheImpl();
+	public ConcurrentHashMap<String, List<User>> cache = new ConcurrentHashMap();
 	private ApplicationEventPublisher publisher;
+
 	public void initBean() {
-        System.out.println("Init Bean for : EmployeeDAOImpl");
-    }
+		System.out.println("Init Bean for : EmployeeDAOImpl");
+	}
+
 	public List<User> getUsers() {
 		Object hostObj = cache.get("host");
 		Object guestObj = cache.get("guest");
 		List<User> hostUserList = (List<User>) hostObj;
 		List<User> guestUserList = (List<User>) guestObj;
 		if (null != hostUserList && hostUserList.size() > 0) {
+			System.err.println("data loaded from cache!!!");
 			return hostUserList;
 		} else if (null != guestUserList && guestUserList.size() > 0) {
+			System.err.println("data loaded from cache!!!");
 			return guestUserList;
 		} else {
-		List<User> userList = repository.findAll();
+			System.err.println("data loaded from database!!!");
+			List<User> userList = repository.findAll();
 			try {
-				cache.add("host", userList, 60000);
+				cache.put("host", userList);
 				publisher.publishEvent(new UserEvent(this, "add", userList, serverList()));
-			}catch(Exception e) {
-				
+			} catch (Exception e) {
+
 			}
 			return userList;
 		}
@@ -69,7 +75,7 @@ public class UserService implements ApplicationEventPublisherAware {
 			try {
 				newEntity = repository.save(newEntity);
 				List<User> responseString = repository.findAll();
-				cache.add("host", responseString, 60000);
+				cache.put("host", responseString);
 				publisher.publishEvent(new UserEvent(this, "add", responseString, serverList()));
 				response.put("STATUS", "SUCCESS");
 				return response;
@@ -81,12 +87,12 @@ public class UserService implements ApplicationEventPublisherAware {
 			try {
 				entity = repository.save(entity);
 				List<User> responseString = repository.findAll();
-				cache.add("host", responseString, 60000);
+				cache.put("host", responseString);
 				publisher.publishEvent(new UserEvent(this, "add", responseString, serverList()));
 				response.put("STATUS", "SUCCESS");
 				return response;
 			} catch (Exception e) {
-				System.err.println("Error : "+e.getMessage());
+				System.err.println("Error : " + e.getMessage());
 				response.put("STATUS", "FAILED");
 				return response;
 			}
@@ -100,7 +106,7 @@ public class UserService implements ApplicationEventPublisherAware {
 	}
 
 	public List<User> udpateCache(List<User> entity) {
-		cache.add("guest", entity, 60000);
+		cache.put("guest", entity);
 		return entity;
 	}
 
