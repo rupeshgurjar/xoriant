@@ -3,7 +3,6 @@ package com.spring.cachesync.service;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -18,8 +17,6 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import com.spring.cachesync.cache.CacheImpl;
-import com.spring.cachesync.cache.ICache;
 import com.spring.cachesync.domain.User;
 import com.spring.cachesync.event.UserEvent;
 import com.spring.cachesync.repository.UserRepository;
@@ -51,13 +48,14 @@ public class UserService implements ApplicationEventPublisherAware {
 			return hostUserList;
 		} else if (null != guestUserList && guestUserList.size() > 0) {
 			System.err.println("data loaded from cache!!!");
+			publishEvent(guestUserList);
 			return guestUserList;
 		} else {
 			System.err.println("data loaded from database!!!");
 			List<User> userList = repository.findAll();
 			try {
 				cache.put("host", userList);
-				publisher.publishEvent(new UserEvent(this, "add", userList, serverList()));
+				publishEvent(userList);
 			} catch (Exception e) {
 
 			}
@@ -66,6 +64,7 @@ public class UserService implements ApplicationEventPublisherAware {
 	}
 
 	public HashMap<String, String> createOrUpdateUser(User entity) {
+		List<User> responseString = null;
 		Optional<User> employee = repository.findById(entity.getId());
 		HashMap<String, String> response = new HashMap<>();
 		if (employee.isPresent()) {
@@ -74,28 +73,26 @@ public class UserService implements ApplicationEventPublisherAware {
 			newEntity.setRole(entity.getRole());
 			try {
 				newEntity = repository.save(newEntity);
-				List<User> responseString = repository.findAll();
+				responseString = repository.findAll();
 				cache.put("host", responseString);
-				publisher.publishEvent(new UserEvent(this, "add", responseString, serverList()));
 				response.put("STATUS", "SUCCESS");
-				return response;
 			} catch (Exception e) {
 				response.put("STATUS", "FAILED");
-				return response;
 			}
+			publishEvent(responseString);
+			return response;
 		} else {
 			try {
 				entity = repository.save(entity);
-				List<User> responseString = repository.findAll();
+				responseString = repository.findAll();
 				cache.put("host", responseString);
-				publisher.publishEvent(new UserEvent(this, "add", responseString, serverList()));
 				response.put("STATUS", "SUCCESS");
-				return response;
 			} catch (Exception e) {
 				System.err.println("Error : " + e.getMessage());
 				response.put("STATUS", "FAILED");
-				return response;
 			}
+			publishEvent(responseString);
+			return response;
 		}
 	}
 
@@ -132,21 +129,12 @@ public class UserService implements ApplicationEventPublisherAware {
 		}
 		return list;
 	}
-
-	// @Scheduled(fixedDelay = 500)
-	public void fixedDelayServiceMethod() {
-		System.out.println(
-				"fixedDelayServiceMethod Method executed at every 5 seconds. Current time is :: " + new Date());
-	}
-
-	// @Scheduled(cron="*/5 * * ?")
-	public void cronServiceMethod() {
-		System.out.println("cronServiceMethod executed at every 5 seconds. Current time is :: " + new Date());
-	}
-
-	// @Scheduled(fixedRate = 500) //Or use this
-	public void fixedRateServiceMethod() {
-		System.out.println("fixedRateServiceMethod executed at every 5 seconds. Current time is :: " + new Date());
+	private void publishEvent(List<User> responseString) {
+		try {
+			publisher.publishEvent(new UserEvent(this, "add", responseString, serverList()));
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
 	}
 
 }
