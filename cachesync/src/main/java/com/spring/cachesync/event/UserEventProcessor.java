@@ -2,7 +2,6 @@ package com.spring.cachesync.event;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
@@ -39,7 +38,7 @@ public class UserEventProcessor implements ApplicationListener<UserEvent> {
 				url = "http://" + host + "/cache-synch/cache";
 				restTemplate.postForObject(url, user, String.class);
 			} catch (Exception e) {
-				System.err.println("url is added :  "+ url);
+				//System.err.println("url is added :  "+ url);
 				serverList.add(url);
 			}
 		}
@@ -57,13 +56,13 @@ public class UserEventProcessor implements ApplicationListener<UserEvent> {
 			socket.connect(socketAdr, 1000);
 			socket.close();
 			isAlive = true;
-			System.err.println("Down  Server calling started ");
+//			System.err.println("Down  Server calling started ");
 			restTemplate.postForObject(url, updateUserCache, String.class);
-			System.err.println("Down  Server calling end ");
+//			System.err.println("Down  Server calling end ");
 		} catch (SocketTimeoutException e) {
-			System.err.println("SocketTimeoutException checkServerStatus URL ->> " + url + " is not connected!!!");
+	//		System.err.println("SocketTimeoutException checkServerStatus URL ->> " + url + " is not connected!!!");
 		} catch (IOException e) {
-			System.err.println("IOException checkServerStatus URL ->> " + url + " is not connected!!!");
+		//	System.err.println("IOException checkServerStatus URL ->> " + url + " is not connected!!!");
 		} finally {
 			if (!socket.isClosed() || socket.isConnected()) {
 				try {
@@ -80,17 +79,17 @@ public class UserEventProcessor implements ApplicationListener<UserEvent> {
 
 	@Scheduled(fixedDelay = 5000)
 	public void cacheUpdateForRestartedServer() {
-		System.err.println("cacheUpdateForRestartedServer  Server calling  ");
+		//System.err.println("cacheUpdateForRestartedServer  Server calling  ");
 		if (null != serverList && serverList.size() > 0) {
 			for (String url : serverList) {
 				try {
 					if (checkServerStatus(url)) {
-						System.err.println("Down  Server calling started ");
+			//			System.err.println("Down  Server calling started ");
 						restTemplate.postForObject(url, updateUserCache, String.class);
-						System.err.println("Down  Server calling end ");
+				//		System.err.println("Down  Server calling end ");
 					}
 				} catch (Exception e) {
-					System.err.println("Exception s URL ->> " + url + " is down!!!");
+					//System.err.println("Exception s URL ->> " + url + " is down!!!");
 				}
 			}
 		}
